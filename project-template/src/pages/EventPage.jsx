@@ -1,20 +1,56 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Checkbox,
+  Container,
+  Divider,
+  FormControl,
+  FormLabel,
+  Heading,
+  Image,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Stack,
+  Tag,
+  Text,
+  Textarea,
+} from "@chakra-ui/react";
 import { useAppData } from "../components/AppDataContext";
+import { toaster } from "../components/ui/toaster";
 
 const toDatetimeLocal = (value) => {
   if (!value) return "";
   const d = new Date(value);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate()
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 export const EventPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { events, categories, categoryById, updateEvent, deleteEvent } = useAppData();
 
-  const event = useMemo(() => events.find((e) => String(e.id) === String(id)), [events, id]);
+  const {
+    events = [],
+    categories = [],
+    categoryById,
+    updateEvent,
+    deleteEvent,
+  } = useAppData();
+
+  const event = useMemo(
+    () => events.find((e) => String(e.id) === String(id)),
+    [events, id]
+  );
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -37,179 +73,295 @@ export const EventPage = () => {
       location: event.location || "",
       startTime: toDatetimeLocal(event.startTime),
       endTime: toDatetimeLocal(event.endTime),
-      categoryIds: (event.categoryIds || []).map(String),
+      categoryIds: (event.categoryIds || []).map(Number),
     });
   }, [event]);
 
+  const inputProps = {
+    variant: "outline",
+    borderWidth: "1px",
+    borderColor: "gray.300",
+    _focusVisible: {
+      borderColor: "blue.400",
+      boxShadow: "0 0 0 1px",
+    },
+  };
+
   if (!event) {
     return (
-      <div>
-        <p>Event not found.</p>
-        <Link to="/events">Back to events</Link>
-      </div>
+      <Container maxW="container.xl" py={6}>
+        <Stack spacing={3}>
+          <Heading size="md">Event not found.</Heading>
+          <Button as={RouterLink} to="/events" w="fit-content" variant="outline">
+            Back to events
+          </Button>
+        </Stack>
+      </Container>
     );
   }
 
-  const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
+  const setField = (key) => (e) =>
+    setForm((p) => ({ ...p, [key]: e.target.value }));
 
   const toggleCategory = (cid) => {
+    const idNum = Number(cid);
     setForm((p) => ({
       ...p,
-      categoryIds: p.categoryIds.includes(cid) ? p.categoryIds.filter((x) => x !== cid) : [...p.categoryIds, cid],
+      categoryIds: p.categoryIds.includes(idNum)
+        ? p.categoryIds.filter((x) => x !== idNum)
+        : [...p.categoryIds, idNum],
     }));
   };
 
   const onSave = async (e) => {
     e.preventDefault();
 
+    if (form.categoryIds.length === 0) {
+      toaster.create({
+        title: "Selecteer minimaal één categorie",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
+
+    const start = new Date(form.startTime);
+    const end = new Date(form.endTime);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      toaster.create({
+        title: "Vul start- en eindtijd in",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
+
     const ok = await updateEvent(event.id, {
       title: form.title.trim(),
       description: form.description.trim(),
       image: form.image.trim(),
       location: form.location.trim(),
-      startTime: new Date(form.startTime).toISOString(),
-      endTime: new Date(form.endTime).toISOString(),
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
       categoryIds: form.categoryIds,
     });
 
-    if (ok) setIsEditing(false);
+    if (ok) {
+      toaster.create({
+        title: "Event opgeslagen",
+        type: "success",
+        duration: 3000,
+        closable: true,
+      });
+      setIsEditing(false);
+    } else {
+      toaster.create({
+        title: "Opslaan mislukt",
+        description: "Probeer het opnieuw.",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+    }
   };
 
   const onDelete = async () => {
-    const confirmed = window.confirm("Are you 100% sure you want to delete this event?");
+    const confirmed = window.confirm(
+      "Weet je zeker dat je dit event wilt verwijderen?"
+    );
     if (!confirmed) return;
 
     const ok = await deleteEvent(event.id);
-    if (ok) navigate("/events");
+
+    if (ok) {
+      toaster.create({
+        title: "Event verwijderd",
+        type: "success",
+        duration: 2500,
+        closable: true,
+      });
+      navigate("/events");
+    } else {
+      toaster.create({
+        title: "Verwijderen mislukt",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+    }
   };
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <Link to="/events">← Back</Link>
-
-      <h1>{event.title}</h1>
-
-      {event.image ? (
-        <img
-          src={event.image}
-          alt={event.title}
-          style={{ width: "100%", maxHeight: 360, objectFit: "cover" }}
-        />
-      ) : null}
-
-      <div>{event.description}</div>
-
-      <div>
-        {new Date(event.startTime).toLocaleString()} – {new Date(event.endTime).toLocaleString()}
-      </div>
-
-      <div>
-        Categories: {(event.categoryIds || []).map((cid) => categoryById.get(String(cid)) || `#${cid}`).join(", ")}
-      </div>
-
-      {event.location ? <div>Location: {event.location}</div> : null}
-
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button type="button" onClick={() => setIsEditing(true)}>
-          Edit Event
-        </button>
-        <button type="button" onClick={onDelete}>
-          Delete Event
-        </button>
-      </div>
-
-      {isEditing && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.35)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-          }}
-          onClick={() => setIsEditing(false)}
+    <Container maxW="container.xl" py={{ base: 4, md: 6 }}>
+      <Stack spacing={5} maxW={{ base: "100%", lg: "980px" }}>
+        <Button
+          as={RouterLink}
+          to="/events"
+          variant="ghost"
+          w="fit-content"
+          px={0}
         >
-          <form
-            onSubmit={onSave}
-            style={{
-              background: "white",
-              maxWidth: 720,
-              width: "100%",
-              padding: 16,
-              borderRadius: 8,
-              display: "grid",
-              gap: 10,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <h2 style={{ margin: 0 }}>Edit event</h2>
-              <button type="button" onClick={() => setIsEditing(false)}>
-                ✕
-              </button>
-            </div>
+          ← Back
+        </Button>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              Title
-              <input required value={form.title} onChange={setField("title")} />
-            </label>
+        <Stack
+          direction={{ base: "column", md: "row" }}
+          spacing={6}
+          align="stretch"
+        >
+          <Box flex="1">
+            <Stack spacing={3}>
+              <Heading size="lg">{event.title}</Heading>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              Description
-              <textarea required rows={4} value={form.description} onChange={setField("description")} />
-            </label>
+              <Text color="gray.600">
+                {new Date(event.startTime).toLocaleString()} –{" "}
+                {new Date(event.endTime).toLocaleString()}
+              </Text>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              Image URL
-              <input required value={form.image} onChange={setField("image")} />
-            </label>
+              {event.location ? <Text>Location: {event.location}</Text> : null}
 
-            <label style={{ display: "grid", gap: 6 }}>
-              Location
-              <input required value={form.location} onChange={setField("location")} />
-            </label>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                Start time
-                <input required type="datetime-local" value={form.startTime} onChange={setField("startTime")} />
-              </label>
-
-              <label style={{ display: "grid", gap: 6 }}>
-                End time
-                <input required type="datetime-local" value={form.endTime} onChange={setField("endTime")} />
-              </label>
-            </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <div>Categories</div>
-              <div style={{ display: "grid", gap: 6 }}>
-                {categories.map((c) => (
-                  <label key={c.id} style={{ display: "flex", gap: 8 }}>
-                    <input
-                      required
-                      type="checkbox"
-                      checked={form.categoryIds.includes(String(c.id))}
-                      onChange={() => toggleCategory(String(c.id))}
-                    />
-                    {c.name}
-                  </label>
+              <Stack direction="row" spacing={2} wrap="wrap">
+                {(event.categoryIds || []).map((cid) => (
+                  <Tag key={cid} size="sm">
+                    {categoryById.get(String(cid)) || `#${cid}`}
+                  </Tag>
                 ))}
-              </div>
-            </div>
+              </Stack>
+            </Stack>
+          </Box>
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button type="button" onClick={() => setIsEditing(false)}>
+          {event.image ? (
+            <Box flex={{ base: "none", md: "0 0 360px" }}>
+              <Image
+                src={event.image}
+                alt={event.title}
+                w="100%"
+                h={{ base: "240px", md: "260px" }}
+                objectFit="cover"
+                borderRadius="md"
+              />
+            </Box>
+          ) : null}
+        </Stack>
+
+        <Text>{event.description}</Text>
+
+        <Divider />
+
+        <Stack direction={{ base: "column", sm: "row" }} spacing={3}>
+          <Button onClick={() => setIsEditing(true)}>Edit Event</Button>
+          <Button variant="outline" onClick={onDelete}>
+            Delete Event
+          </Button>
+        </Stack>
+      </Stack>
+
+      <Modal isOpen={isEditing} onClose={() => setIsEditing(false)} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit event</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Box as="form" id="edit-event-form" onSubmit={onSave}>
+              <Stack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel>Title</FormLabel>
+                  <Input
+                    value={form.title}
+                    onChange={setField("title")}
+                    {...inputProps}
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Description</FormLabel>
+                  <Textarea
+                    rows={4}
+                    value={form.description}
+                    onChange={setField("description")}
+                    {...inputProps}
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Image URL</FormLabel>
+                  <Input
+                    value={form.image}
+                    onChange={setField("image")}
+                    {...inputProps}
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Location</FormLabel>
+                  <Input
+                    value={form.location}
+                    onChange={setField("location")}
+                    {...inputProps}
+                  />
+                </FormControl>
+
+                <Stack direction={{ base: "column", md: "row" }} spacing={4}>
+                  <FormControl isRequired>
+                    <FormLabel>Start time</FormLabel>
+                    <Input
+                      type="datetime-local"
+                      value={form.startTime}
+                      onChange={setField("startTime")}
+                      {...inputProps}
+                    />
+                  </FormControl>
+
+                  <FormControl isRequired>
+                    <FormLabel>End time</FormLabel>
+                    <Input
+                      type="datetime-local"
+                      value={form.endTime}
+                      onChange={setField("endTime")}
+                      {...inputProps}
+                    />
+                  </FormControl>
+                </Stack>
+
+                <FormControl isRequired>
+                  <FormLabel>Categories</FormLabel>
+                  <Stack spacing={2}>
+                    {categories.map((c) => {
+                      const cid = Number(c.id);
+                      return (
+                        <Checkbox
+                          key={c.id}
+                          isChecked={form.categoryIds.includes(cid)}
+                          onChange={() => toggleCategory(cid)}
+                        >
+                          {c.name}
+                        </Checkbox>
+                      );
+                    })}
+                  </Stack>
+                  <Text fontSize="sm" color="gray.600" mt={2}>
+                    Selecteer minimaal één categorie.
+                  </Text>
+                </FormControl>
+              </Stack>
+            </Box>
+          </ModalBody>
+
+          <ModalFooter>
+            <Stack direction="row" spacing={3}>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
                 Cancel
-              </button>
-              <button type="submit">Save</button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
+              </Button>
+              <Button type="submit" form="edit-event-form">
+                Save
+              </Button>
+            </Stack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Container>
   );
 };

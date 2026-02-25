@@ -1,34 +1,58 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Box,
+  Checkbox,
+  Container,
+  Divider,
+  Heading,
+  Image,
+  Input,
+  SimpleGrid,
+  Skeleton,
+  Stack,
+  Tag,
+  Text,
+} from "@chakra-ui/react";
 import { useAppData } from "../components/AppDataContext";
 
 const SkeletonCard = () => (
-  <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
-    <div style={{ width: "100%", height: 220, background: "#e5e7eb" }} />
-    <div style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ width: "60%", height: 16, background: "#e5e7eb", borderRadius: 6 }} />
-      <div style={{ width: "90%", height: 12, background: "#e5e7eb", borderRadius: 6 }} />
-      <div style={{ width: "75%", height: 12, background: "#e5e7eb", borderRadius: 6 }} />
-      <div style={{ width: "50%", height: 12, background: "#e5e7eb", borderRadius: 6 }} />
-    </div>
-  </div>
+  <Box borderWidth="1px" borderColor="gray.200" borderRadius="md" overflow="hidden">
+    <Skeleton h="220px" w="100%" />
+    <Box p={4}>
+      <Stack spacing={3}>
+        <Skeleton h="18px" w="60%" />
+        <Skeleton h="12px" w="90%" />
+        <Skeleton h="12px" w="75%" />
+        <Skeleton h="12px" w="50%" />
+      </Stack>
+    </Box>
+  </Box>
 );
 
 export const EventsPage = () => {
-  const { events, categories, categoryById, isLoading } = useAppData();
+  const { events = [], categories = [], categoryById, isLoading } = useAppData();
 
   const [query, setQuery] = useState("");
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]); // numbers
+
+  const inputProps = {
+    variant: "outline",
+    borderWidth: "1px",
+    borderColor: "gray.300",
+    _focusVisible: { borderColor: "blue.400", boxShadow: "0 0 0 1px" },
+  };
 
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
+
     return events.filter((event) => {
       const matchesQuery =
         !q ||
         (event.title || "").toLowerCase().includes(q) ||
         (event.description || "").toLowerCase().includes(q);
 
-      const eCats = (event.categoryIds || []).map(String);
+      const eCats = (event.categoryIds || []).map(Number); // numbers
       const matchesCats =
         selectedCategoryIds.length === 0 ||
         selectedCategoryIds.every((id) => eCats.includes(id));
@@ -38,93 +62,136 @@ export const EventsPage = () => {
   }, [events, query, selectedCategoryIds]);
 
   const toggleCategory = (id) => {
+    const cid = Number(id);
     setSelectedCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(cid) ? prev.filter((x) => x !== cid) : [...prev, cid]
     );
   };
 
   return (
-    <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-      <div style={{ minWidth: 280 }}>
-        <h1>Events</h1>
+    <Container maxW="container.xl" px={{ base: 4, md: 6 }}>
+      <Box>
+        <Heading size="lg" mb={6}>
+          Events
+        </Heading>
 
-        <div style={{ marginBottom: 16 }}>
-          <div>Search</div>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title or description"
-            style={{ width: "100%" }}
-          />
-        </div>
-
-        <div>
-          <div>Filter categories</div>
-          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-            {categories.map((c) => (
-              <label key={c.id} style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={selectedCategoryIds.includes(String(c.id))}
-                  onChange={() => toggleCategory(String(c.id))}
+        <Box
+          display="flex"
+          gap={6}
+          flexDirection={{ base: "column", lg: "row" }}
+          alignItems="flex-start"
+        >
+          {/* Filters */}
+          <Box
+            w={{ base: "100%", lg: "320px" }}
+            borderWidth="1px"
+            borderColor="gray.200"
+            borderRadius="md"
+            p={4}
+          >
+            <Stack spacing={4}>
+              <Box>
+                <Text mb={2}>Search</Text>
+                <Input
+                  {...inputProps}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search title or description"
                 />
-                {c.name}
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
+              </Box>
 
-      <div style={{ flex: 1, minWidth: 320, display: "grid", gap: 12 }}>
-        {isLoading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : (
-          <>
-            {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}
-              >
-                <Link
-                  to={`/events/${event.id}`}
-                  style={{ color: "inherit", textDecoration: "none" }}
-                >
-                  {event.image ? (
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      style={{ width: "100%", height: 220, objectFit: "cover" }}
-                    />
-                  ) : null}
+              <Divider />
 
-                  <div style={{ padding: 12 }}>
-                    <div style={{ fontSize: 18 }}>{event.title}</div>
-                    <div style={{ marginTop: 6 }}>{event.description}</div>
+              <Box>
+                <Text mb={2}>Filter categories</Text>
+                <Stack spacing={2}>
+                  {categories.map((c) => {
+                    const cid = Number(c.id);
+                    return (
+                      <Checkbox
+                        key={c.id}
+                        isChecked={selectedCategoryIds.includes(cid)}
+                        onChange={() => toggleCategory(cid)}
+                      >
+                        {c.name}
+                      </Checkbox>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            </Stack>
+          </Box>
 
-                    <div style={{ marginTop: 10 }}>
-                      {new Date(event.startTime).toLocaleString()} –{" "}
-                      {new Date(event.endTime).toLocaleString()}
-                    </div>
+          {/* List */}
+          <Box flex="1" w="100%">
+            {isLoading ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </SimpleGrid>
+            ) : (
+              <>
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+                  {filteredEvents.map((event) => (
+                    <Box
+                      key={event.id}
+                      as={RouterLink}
+                      to={`/events/${event.id}`}
+                      borderWidth="1px"
+                      borderColor="gray.200"
+                      borderRadius="md"
+                      overflow="hidden"
+                      _hover={{ transform: "translateY(-2px)", textDecoration: "none" }}
+                      transition="transform 0.1s ease-in-out"
+                    >
+                      {event.image ? (
+                        <Image
+                          src={event.image}
+                          alt={event.title}
+                          w="100%"
+                          h="220px"
+                          objectFit="cover"
+                        />
+                      ) : (
+                        <Box h="220px" bg="gray.100" />
+                      )}
 
-                    <div style={{ marginTop: 8 }}>
-                      Categories:{" "}
-                      {(event.categoryIds || [])
-                        .map((cid) => categoryById.get(String(cid)) || `#${cid}`)
-                        .join(", ")}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            ))}
+                      <Box p={4}>
+                        <Stack spacing={2}>
+                          <Heading size="md" noOfLines={1}>
+                            {event.title}
+                          </Heading>
 
-            {filteredEvents.length === 0 && <p>Geen events gevonden.</p>}
-          </>
-        )}
-      </div>
-    </div>
+                          <Text noOfLines={3}>{event.description}</Text>
+
+                          <Text fontSize="sm" color="gray.600">
+                            {new Date(event.startTime).toLocaleString()} –{" "}
+                            {new Date(event.endTime).toLocaleString()}
+                          </Text>
+
+                          <Stack direction="row" spacing={2} wrap="wrap">
+                            {(event.categoryIds || []).map((cid) => {
+                              const name = categoryById.get(String(cid)) || `#${cid}`;
+                              return (
+                                <Tag key={`${event.id}-${cid}`} size="sm">
+                                  {name}
+                                </Tag>
+                              );
+                            })}
+                          </Stack>
+                        </Stack>
+                      </Box>
+                    </Box>
+                  ))}
+                </SimpleGrid>
+
+                {filteredEvents.length === 0 && <Text mt={4}>Geen events gevonden.</Text>}
+              </>
+            )}
+          </Box>
+        </Box>
+      </Box>
+    </Container>
   );
 };

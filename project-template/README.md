@@ -1,12 +1,40 @@
-# React + Vite
+## AI Disclosure
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Voor dit project heb ik gebruikgemaakt van AI (ChatGPT / OpenAI) als ondersteunend hulpmiddel tijdens het ontwikkelen van de applicatie.
 
-Currently, two official plugins are available:
+### Hoe en waar ik AI heb gebruikt
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Ik heb AI ingezet bij:
 
-## Expanding the ESLint configuration
+- Het responsive maken van componenten (Navigation, EventsPage en EventPage).
+- Het verbeteren en structureren van Chakra UI layouts.
+- Het implementeren van toaster-notificaties (Chakra v3).
+- Het oplossen van bugs, met name rondom categorie-validatie en formulierverwerking.
+- Het refactoren van bestaande code (bijvoorbeeld van inline styles naar Chakra componenten).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Waarom ik AI heb gebruikt
+
+Ik heb AI gebruikt als ondersteuning om:
+
+- Sneller bugs te kunnen oplossen.
+- Mijn code-structuur te verbeteren.
+- Requirements te vertalen naar concrete implementaties.
+- Mijn aanpak te controleren en waar nodig te verbeteren.
+
+### Welke code is beïnvloed
+
+De volgende bestanden bevatten (deels) AI-ondersteunde code:
+
+- `src/components/Root.jsx`
+- `src/pages/EventsPage.jsx`
+- `src/pages/EventPage.jsx`
+- De integratie van `toaster.create(...)`
+
+Concreet gaat het onder andere om:
+
+- Responsive layout props zoals `direction={{ base: "column", md: "row" }}`
+- De implementatie van toaster-notificaties
+- Validatielogica voor categorie-selectie
+- Het herschrijven en structureren van componenten
+
+Alle AI-suggesties heb ik zelf beoordeeld, getest en waar nodig aangepast voordat ik ze heb toegepast in mijn project.

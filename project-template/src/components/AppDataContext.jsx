@@ -1,10 +1,10 @@
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
-  useEffect,
-  useCallback,
 } from "react";
 
 const API_BASE_URL = "http://localhost:3000";
@@ -15,17 +15,6 @@ export const AppDataProvider = ({ children }) => {
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // simple toast system
-  const [toast, setToast] = useState(null); // { type: 'success'|'error', message: string }
-
-  const notify = useCallback((type, message) => {
-    setToast({ type, message });
-    window.clearTimeout(notify._t);
-    notify._t = window.setTimeout(() => setToast(null), 3000);
-  }, []);
-  // eslint-disable-next-line
-  notify._t = notify._t || null;
 
   const categoryById = useMemo(() => {
     const map = new Map();
@@ -55,10 +44,11 @@ export const AppDataProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    refetch().catch(() =>
-      notify("error", "Failed to load data from JSON server.")
-    );
-  }, [refetch, notify]);
+    // errors are handled in the UI (toaster)
+    refetch().catch((err) => {
+      console.error("Failed to load data from JSON server.", err);
+    });
+  }, [refetch]);
 
   const addEvent = useCallback(
     async (payload) => {
@@ -69,15 +59,14 @@ export const AppDataProvider = ({ children }) => {
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error("POST failed");
-        notify("success", "Event added successfully.");
         await refetch();
         return true;
-      } catch {
-        notify("error", "Failed to add event.");
+      } catch (err) {
+        console.error("Failed to add event.", err);
         return false;
       }
     },
-    [refetch, notify]
+    [refetch]
   );
 
   const updateEvent = useCallback(
@@ -89,15 +78,14 @@ export const AppDataProvider = ({ children }) => {
           body: JSON.stringify(patch),
         });
         if (!res.ok) throw new Error("PATCH failed");
-        notify("success", "Event updated successfully.");
         await refetch();
         return true;
-      } catch {
-        notify("error", "Failed to update event.");
+      } catch (err) {
+        console.error("Failed to update event.", err);
         return false;
       }
     },
-    [refetch, notify]
+    [refetch]
   );
 
   const deleteEvent = useCallback(
@@ -107,15 +95,14 @@ export const AppDataProvider = ({ children }) => {
           method: "DELETE",
         });
         if (!res.ok) throw new Error("DELETE failed");
-        notify("success", "Event deleted successfully.");
         await refetch();
         return true;
-      } catch {
-        notify("error", "Failed to delete event.");
+      } catch (err) {
+        console.error("Failed to delete event.", err);
         return false;
       }
     },
-    [refetch, notify]
+    [refetch]
   );
 
   const value = useMemo(
@@ -128,8 +115,6 @@ export const AppDataProvider = ({ children }) => {
       addEvent,
       updateEvent,
       deleteEvent,
-      toast,
-      notify,
     }),
     [
       events,
@@ -140,15 +125,11 @@ export const AppDataProvider = ({ children }) => {
       addEvent,
       updateEvent,
       deleteEvent,
-      toast,
-      notify,
     ]
   );
 
   return (
-    <AppDataContext.Provider value={value}>
-      {children}
-    </AppDataContext.Provider>
+    <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
   );
 };
 

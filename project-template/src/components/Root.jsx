@@ -15,10 +15,10 @@ import {
 } from "@chakra-ui/react";
 
 import { useAppData } from "./AppDataContext";
-import { Toaster, toaster } from "./ui/toaster";
+import { toaster } from "./ui/toaster";
 
 export const Root = () => {
-  const { events = [], categories = [], categoryById, addEvent } = useAppData();
+  const { events = [], categories = [], addEvent } = useAppData();
   const [showForm, setShowForm] = useState(false);
 
   const [title, setTitle] = useState("");
@@ -59,6 +59,39 @@ export const Root = () => {
   const onSubmitAdd = async (e) => {
     e.preventDefault();
 
+    if (!title.trim() || !description.trim() || !image.trim() || !location.trim()) {
+      toaster.create({
+        title: "Vul alle velden in",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
+
+    if (!startTime || !endTime) {
+      toaster.create({
+        title: "Vul een start- en eindtijd in",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
+
+    const startIso = new Date(startTime).toISOString();
+    const endIso = new Date(endTime).toISOString();
+
+    if (new Date(endIso) <= new Date(startIso)) {
+      toaster.create({
+        title: "Eindtijd moet na starttijd liggen",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
+
     if (categoryIds.length === 0) {
       toaster.create({
         title: "Selecteer minimaal één categorie",
@@ -69,17 +102,18 @@ export const Root = () => {
       return;
     }
 
-    try {
-      await addEvent({
-        title: title.trim(),
-        description: description.trim(),
-        image: image.trim(),
-        location: location.trim(),
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        categoryIds,
-      });
+    const success = await addEvent({
+      title: title.trim(),
+      description: description.trim(),
+      image: image.trim(),
+      location: location.trim(),
+      startTime: startIso,
+      endTime: endIso,
+      categoryIds,
+      createdBy: 1,
+    });
 
+    if (success) {
       toaster.create({
         title: "Event opgeslagen",
         description: "Het event is succesvol aangemaakt.",
@@ -90,8 +124,7 @@ export const Root = () => {
 
       setShowForm(false);
       reset();
-    // eslint-disable-next-line no-unused-vars
-    } catch (err) {
+    } else {
       toaster.create({
         title: "Opslaan mislukt",
         description: "Probeer het opnieuw.",
@@ -104,9 +137,7 @@ export const Root = () => {
 
   return (
     <Box py={{ base: 4, md: 6 }}>
-      <Toaster />
-
-      <Container maxW="container.lg" px={{ base: 4, md: 6 }}>
+      <Container maxW="1400px" px={{ base: 4, md: 6 }}>
         <Stack
           direction={{ base: "column", md: "row" }}
           spacing={4}
@@ -131,10 +162,7 @@ export const Root = () => {
         </Stack>
 
         {showForm && (
-          <Container
-            maxW={{ base: "100%", md: "640px", lg: "720px" }}
-            px={0}
-          >
+          <Container maxW={{ base: "100%", md: "640px", lg: "720px" }} px={0}>
             <Box
               as="form"
               onSubmit={onSubmitAdd}
@@ -242,7 +270,7 @@ export const Root = () => {
           </Container>
         )}
 
-        <Outlet context={{ events, categories, categoryById }} />
+        <Outlet context={{ events, categories }} />
       </Container>
     </Box>
   );

@@ -18,6 +18,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Spinner,
   Stack,
   Tag,
   Text,
@@ -43,6 +44,7 @@ export const EventPage = () => {
     events = [],
     categories = [],
     categoryById,
+    isLoading,
     updateEvent,
     deleteEvent,
   } = useAppData();
@@ -87,19 +89,6 @@ export const EventPage = () => {
     },
   };
 
-  if (!event) {
-    return (
-      <Container maxW="container.xl" py={6}>
-        <Stack spacing={3}>
-          <Heading size="md">Event not found.</Heading>
-          <Button as={RouterLink} to="/events" w="fit-content" variant="outline">
-            Back to events
-          </Button>
-        </Stack>
-      </Container>
-    );
-  }
-
   const setField = (key) => (e) =>
     setForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -115,6 +104,21 @@ export const EventPage = () => {
 
   const onSave = async (e) => {
     e.preventDefault();
+
+    if (
+      !form.title.trim() ||
+      !form.description.trim() ||
+      !form.image.trim() ||
+      !form.location.trim()
+    ) {
+      toaster.create({
+        title: "Vul alle velden in",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
 
     if (form.categoryIds.length === 0) {
       toaster.create({
@@ -132,6 +136,16 @@ export const EventPage = () => {
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       toaster.create({
         title: "Vul start- en eindtijd in",
+        type: "error",
+        duration: 3000,
+        closable: true,
+      });
+      return;
+    }
+
+    if (end <= start) {
+      toaster.create({
+        title: "Eindtijd moet na starttijd liggen",
         type: "error",
         duration: 3000,
         closable: true,
@@ -193,6 +207,30 @@ export const EventPage = () => {
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <Container maxW="container.xl" py={6}>
+        <Stack direction="row" spacing={3} align="center">
+          <Spinner />
+          <Text>Event laden...</Text>
+        </Stack>
+      </Container>
+    );
+  }
+
+  if (!event) {
+    return (
+      <Container maxW="container.xl" py={6}>
+        <Stack spacing={3}>
+          <Heading size="md">Event not found.</Heading>
+          <Button as={RouterLink} to="/events" w="fit-content" variant="outline">
+            Back to events
+          </Button>
+        </Stack>
+      </Container>
+    );
+  }
 
   return (
     <Container maxW="container.xl" py={{ base: 4, md: 6 }}>
@@ -342,9 +380,6 @@ export const EventPage = () => {
                       );
                     })}
                   </Stack>
-                  <Text fontSize="sm" color="gray.600" mt={2}>
-                    Selecteer minimaal één categorie.
-                  </Text>
                 </FormControl>
               </Stack>
             </Box>

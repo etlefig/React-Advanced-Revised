@@ -1,6 +1,11 @@
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import { ChakraProvider } from "@chakra-ui/react";
+import { Toaster } from "./toaster";
 
 export function Provider({ children }) {
-  return <ChakraProvider value={defaultSystem}>{children}</ChakraProvider>;
+  return (
+    <ChakraProvider>
+      {children}
+      <Toaster />
+    </ChakraProvider>
+  );
 }
-
